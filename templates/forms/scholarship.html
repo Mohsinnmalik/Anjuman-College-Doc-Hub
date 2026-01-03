@@ -1,0 +1,36 @@
+<!-- templates/forms/scholarship.html -->
+{% extends "base.html" %} {% block title %}Scholarship Form{% endblock %} {%
+block content %}
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow">
+  <h1 class="text-3xl font-bold text-yellow-600 mb-4">
+    Scholarship Application
+  </h1>
+  <p class="text-gray-600 mb-6">Upload fee receipt to prove eligibility</p>
+
+  <form
+    action="/submit/scholarship"
+    method="POST"
+    enctype="multipart/form-data"
+  >
+    <textarea
+      name="purpose"
+      rows="3"
+      class="w-full p-3 border rounded mb-4"
+      placeholder="e.g., Need-based scholarship for B.Tech"
+    ></textarea>
+
+    <input
+      type="file"
+      name="document"
+      accept="image/*"
+      class="w-full p-3 border rounded mb-4"
+    />
+
+    <button
+      class="bg-yellow-600 text-white px-6 py-3 rounded font-bold hover:bg-yellow-700"
+    >
+      Generate Scholarship Form
+    </button>
+  </form>
+</div>
+{% endblock %}

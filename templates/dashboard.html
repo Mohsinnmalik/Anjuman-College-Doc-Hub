@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | DocHub{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Welcome Header -->
+    <div class="glass-card p-8 rounded-2xl mb-8 flex flex-col md:flex-row items-center justify-between gap-6 border-l-4 border-brand-gold">
+        <div>
+            <h1 class="text-3xl font-display font-bold text-brand-navy mb-2">Hello, {{ username }}!</h1>
+            <p class="text-slate-500">Welcome to your document management dashboard.</p>
+        </div>
+        <div>
+            <p class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-1">Current Role</p>
+            <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-brand-navy/10 text-brand-navy font-bold text-sm">
+                {{ role|title }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <h2 class="text-xl font-bold text-brand-navy mb-6 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-brand-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        Quick Actions
+    </h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <a href="/templates" class="group">
+            <div class="glass-card p-6 rounded-xl relative overflow-hidden hover:border-brand-accent/50 transition-all">
+                <div class="absolute right-0 top-0 p-4 opacity-10 transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-32 w-32 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <div class="relative z-10">
+                    <div class="w-12 h-12 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mb-4 font-bold text-xl group-hover:bg-green-600 group-hover:text-white transition-colors">+</div>
+                    <h3 class="text-lg font-bold text-brand-navy mb-1">Create New Document</h3>
+                    <p class="text-slate-500 text-sm">Start a new sick leave, certificate, or poster.</p>
+                </div>
+            </div>
+        </a>
+        
+        <!-- Placeholder for History/Profile if needed -->
+        <div class="glass-card p-6 rounded-xl opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all cursor-not-allowed">
+             <div class="w-12 h-12 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center mb-4 font-bold text-xl">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+             </div>
+             <h3 class="text-lg font-bold text-brand-navy mb-1">Recent History</h3>
+             <p class="text-slate-500 text-sm">View your past generated documents (Coming Soon).</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

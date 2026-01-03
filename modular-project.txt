@@ -1,0 +1,162 @@
+=== config.py ===
+import os
+
+class Config:
+    SECRET_KEY = 'super-secret-key-123'
+    TESSERACT_PATH = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    OLLAMA_API = 'http://localhost:11434/api/generate'
+
+TEMPLATES = {
+    'student': [
+        {'id': 'sick_leave', 'name': 'Sick Leave', 'description': 'Medical leave with prescription'},
+        {'id': 'scholarship', 'name': 'Scholarship Form', 'description': 'Apply with fee receipt'},
+        {'id': 'complaint', 'name': 'Complaint Form', 'description': 'File a complaint'}
+    ],
+    'teacher': [
+        {'id': 'certificate', 'name': 'Event Certificate', 'description': 'Generate from draft'},
+        {'id': 'poster', 'name': 'Event Poster', 'description': 'Create from sketch'}
+    ],
+    'admin': [
+        {'id': 'manage', 'name': 'Manage Templates', 'description': 'Edit templates'},
+        {'id': 'analytics', 'name': 'Analytics', 'description': 'View stats'}
+    ]
+}
+
+=== ocr/processor.py ===
+from PIL import Image, ImageEnhance, ImageFilter
+import pytesseract
+
+def preprocess_image(image):
+    img = image.convert('L')
+    img = img.filter(ImageFilter.MedianFilter())
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(2)
+    return img.resize((img.width * 2, img.height * 2))
+
+def extract_text(image_file):
+    try:
+        img = Image.open(image_file)
+        img = preprocess_image(img)
+        config = r'--oem 3 --psm 6 -l eng+hin'
+        return pytesseract.image_to_string(img, config=config)
+    except Exception as e:
+        return f"OCR Error: {str(e)}"
+
+=== ocr/detector.py ===
+import re
+
+def detect_document_type(text):
+    text_lower = text.lower()
+    if any(k in text_lower for k in ['rx', 'rest', 'days', 'fever', 'headache']):
+        return {'type': 'medical', 'template': 'sick_leave', 'data': extract_medical(text)}
+    if any(k in text_lower for k in ['receipt', 'amount', 'paid', 'rs.', 'fee']):
+        return {'type': 'receipt', 'template': 'scholarship', 'data': extract_receipt(text)}
+    if any(k in text_lower for k in ['event', 'poster', 'venue']):
+        return {'type': 'poster', 'template': 'poster', 'data': extract_poster(text)}
+    if any(k in text_lower for k in ['certificate', 'award']):
+        return {'type': 'certificate', 'template': 'certificate', 'data': extract_certificate(text)}
+    return {'type': 'unknown', 'template': None, 'data': {}}
+
+def extract_medical(text):
+    days = re.search(r'(rest|rx|leave).*?(\d+)', text.lower())
+    return {'days': days.group(2) if days else "1"}
+
+def extract_receipt(text):
+    amount = re.search(r'(rs|inr)[\s:]*([\d,]+)', text.lower())
+    return {'amount': amount.group(2).replace(',','') if amount else "N/A"}
+
+def extract_poster(text):
+    return {'title': text.split('\n')[0] if text else "Event"}
+
+def extract_certificate(text):
+    name = re.search(r'name[:\s]*([a-zA-Z\s]+)', text, re.I)
+    return {'name': name.group(1).strip() if name else "Student"}
+
+=== ai/generator.py ===
+import requests
+from config import Config
+
+def generate_document(template_name, username, ocr_data=None, purpose=""):
+    base = f"Generate {template_name} for {username}."
+    if ocr_data and ocr_data['type'] == 'medical':
+        prompt = f"{base} Rest {ocr_data['data']['days']} days."
+    elif ocr_data and ocr_data['type'] == 'receipt':
+        prompt = f"{base} Amount ₹{ocr_data['data']['amount']}."
+    else:
+        prompt = f"{base} Purpose: {purpose}"
+    prompt += "\nReturn only the document."
+    try:
+        r = requests.post(Config.OLLAMA_API, json={"model": "llama3.1:8b-instruct-q4_0", "prompt": prompt, "stream": False})
+        return r.json()['response']
+    except:
+        return "AI failed."
+
+=== utils/pdf.py ===
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
+
+def generate_pdf(text, title):
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    w, h = letter
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(50, h - 50, title)
+    c.setFont("Helvetica", 12)
+    y = h - 100
+    for line in text.split('\n'):
+        c.drawString(50, y, line[:80])
+        y -= 20
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+=== templates/base.html ===
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>{% block title %}Doc Hub{% endblock %}</title>
+<script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-gray-100"><nav class="bg-blue-600 text-white p-4">
+<div class="container mx-auto flex justify-between"><h1 class="text-xl font-bold">College Doc Hub</h1>
+{% if session.username %}<a href="/logout" class="hover:underline">Logout {{ session.username }}</a>{% endif %}
+</div></nav><div class="container mx-auto p-6">{% block content %}{% endblock %}</div></body></html>
+
+=== templates/login.html ===
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Login</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-gradient-to-br from-blue-500 to-purple-600 min-h-screen flex items-center justify-center">
+<div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md"><h1 class="text-3xl font-bold text-center text-blue-600 mb-6">College Doc Hub</h1>
+<form action="/login" method="POST" class="space-y-4"><input type="text" name="username" placeholder="Name" required class="w-full px-4 py-2 border rounded-lg">
+<select name="role" required class="w-full px-4 py-2 border rounded-lg"><option value="student">Student</option><option value="teacher">Teacher</option><option value="admin">Admin</option></select>
+<button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Login</button></form></div></body></html>
+
+=== templates/dashboard.html ===
+{% extends "base.html" %}{% block title %}Dashboard{% endblock %}{% block content %}
+<div class="text-center py-12"><h1 class="text-4xl font-bold text-blue-600 mb-4">Welcome, {{ username }}!</h1>
+<p class="text-xl text-gray-700 mb-8">Role: <strong>{{ role|capitalize }}</strong></p>
+<a href="/templates" class="bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-green-700">View Templates</a></div>{% endblock %}
+
+=== templates/select_templates.html ===
+{% extends "base.html" %}{% block title %}Templates{% endblock %}{% block content %}
+<div class="max-w-6xl mx-auto"><div class="flex justify-between items-center mb-8"><h1 class="text-3xl font-bold text-blue-600">Choose Template</h1>
+<a href="/dashboard" class="text-blue-600 hover:underline">Back</a></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+{% for t in templates %}<div class="bg-white p-6 rounded-lg shadow hover:shadow-xl"><h3 class="text-xl font-bold text-blue-700 mb-2">{{ t.name }}</h3>
+<p class="text-gray-600 mb-4">{{ t.description }}</p><a href="/form/{{ t.id }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Start</a></div>{% endfor %}</div></div>{% endblock %}
+
+=== templates/result.html ===
+{% extends "base.html" %}{% block title %}Result{% endblock %}{% block content %}
+<div class="max-w-4xl mx-auto"><h1 class="text-3xl font-bold text-green-600 mb-6">Generated!</h1>
+<div class="mb-6 p-4 rounded-lg bg-{{ 'red' if detected == 'medical' else 'yellow' if detected == 'receipt' else 'blue' }}-50 border border-{{ 'red' if detected == 'medical' else 'yellow' if detected == 'receipt' else 'blue' }}-300">
+<p class="font-bold text-lg">AI Detected: <span class="text-xl">{{ detected|upper }}</span></p></div>
+<div class="grid md:grid-cols-2 gap-8 mb-8"><div class="bg-blue-50 p-6 rounded-lg"><h2 class="text-xl font-bold text-blue-700 mb-3">{{ template }}</h2>
+<pre class="whitespace-pre-wrap text-sm font-mono">{{ letter }}</pre></div><div class="bg-green-50 p-6 rounded-lg"><h3 class="text-lg font-bold text-green-700 mb-3">OCR Text</h3>
+{% if raw_text %}<details><summary class="cursor-pointer text-sm text-green-600">Show</summary><pre class="mt-2 text-xs bg-white p-3 rounded border max-h-48 overflow-auto">{{ raw_text }}</pre></details>{% else %}<p class="text-gray-600">No upload</p>{% endif %}</div></div>
+<div class="flex gap-4"><a href="/download" class="bg-blue-600 text-white px-6 py-3 rounded font-bold hover:bg-blue-700">Download PDF</a>
+<a href="/templates" class="bg-gray-500 text-white px-6 py-3 rounded hover:bg-gray-600">New</a></div></div>{% endblock %}
+
+=== templates/forms/sick_leave.html ===
+{% extends "base.html" %}{% block title %}Sick Leave{% endblock %}{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow"><h1 class="text-3xl font-bold text-red-600 mb-4">Sick Leave</h1>
+<p class="text-gray-600 mb-6">Upload prescription</p><form action="/submit/sick_leave" method="POST" enctype="multipart/form-data">
+<textarea name="purpose" rows="3" class="w-full p-3 border rounded mb-4" placeholder="Extra details"></textarea>
+<input type="file" name="document" accept="image/*" class="w-full p-3 border rounded mb-4">
+<button class="bg-red-600 text-white px-6 py-3 rounded font-bold hover:bg-red-700">Generate</button></form></div>{% endblock %}

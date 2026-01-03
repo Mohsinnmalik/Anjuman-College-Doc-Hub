@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}College Doc Hub{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Outfit (Headings) & Inter (Body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              display: ["Outfit", "sans-serif"],
+            },
+            colors: {
+              brand: {
+                navy: "#0f172a",    // Deep Navy
+                gold: "#d4af37",    // Anjuman Gold
+                light: "#f8fafc",
+                accent: "#3b82f6"   // Bright Blue
+              }
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-out forwards',
+              'slide-up': 'slideUp 0.6s ease-out forwards',
+              'blob': 'blob 7s infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              blob: {
+                "0%": { transform: "translate(0px, 0px) scale(1)" },
+                "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+                "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+                "100%": { transform: "translate(0px, 0px) scale(1)" }
+              }
+            }
+          },
+        },
+      };
+    </script>
+
+    <style>
+      /* Custom Utilities */
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+      
+      .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      
+      .glass-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+      }
+
+      body {
+        background-color: #f0f4f8;
+        background-image: 
+          radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+          radial-gradient(at 100% 0%, rgba(212, 175, 55, 0.15) 0px, transparent 50%),
+          radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.1) 0px, transparent 50%);
+        background-attachment: fixed;
+      }
+    </style>
+  </head>
+  <body class="text-slate-800 font-sans min-h-screen flex flex-col">
+    
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 glass-panel shadow-sm">
+      <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+        <a href="/" class="flex items-center gap-3 group">
+          <div class="w-10 h-10 bg-brand-navy rounded-lg flex items-center justify-center text-brand-gold shadow-md group-hover:scale-105 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.499 5.221 69.78 69.78 0 00-2.658.814m-15.482 0A50.55 50.55 0 0112 13.489a50.551 50.551 0 0112-1.722m-12 5.374v-5.374" />
+            </svg>
+          </div>
+          <span class="text-2xl font-display font-bold text-brand-navy tracking-tight group-hover:text-blue-700 transition-colors">
+            Doc<span class="text-brand-gold">Hub</span>
+          </span>
+        </a>
+
+        {% if session.username %}
+        <div class="flex items-center gap-6">
+          <div class="hidden md:flex flex-col text-right">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Logged in as</span>
+            <span class="font-display font-bold text-brand-navy">{{ session.username }}</span>
+          </div>
+          <a href="/logout" class="bg-white border border-slate-200 text-slate-600 px-5 py-2 rounded-full text-sm font-semibold hover:bg-slate-50 hover:text-red-600 hover:border-red-100 transition-all shadow-sm">
+            Sign Out
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-6 py-8 animate-slide-up">
+      {% if session.error %}
+      <div class="mb-8 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r shadow-sm flex items-center gap-3 animate-fade-in">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <p class="font-medium">{{ session.pop('error', None) }}</p>
+      </div>
+      {% endif %}
+      
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto py-8 text-center text-slate-400 text-sm font-medium">
+      <p>&copy; 2026 Anjuman College Check. Build by mohsin.</p>
+    </footer>
+
+  </body>
+</html>
