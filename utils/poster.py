@@ -2,17 +2,31 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 import os
 
 # --- HELPERS (Copied for stability) ---
+# --- HELPERS (Copied for stability) ---
 def get_font(name, size):
     try:
+        # Linux/Docker Paths
         font_map = {
-            'header': ['georgiab.ttf', 'timesbd.ttf', 'arialbd.ttf'],
-            'body': ['georgia.ttf', 'times.ttf', 'arial.ttf'],
-            'fancy': ['calibri.ttf', 'corsiva.ttf']
+            'header': ['LiberationSerif-Bold.ttf', 'georgiab.ttf', 'timesbd.ttf', 'arialbd.ttf'],
+            'body': ['LiberationSerif-Regular.ttf', 'georgia.ttf', 'times.ttf', 'arial.ttf'],
+            'fancy': ['LiberationSans-Italic.ttf', 'calibri.ttf', 'corsiva.ttf'],
+            'sans': ['LiberationSans-Regular.ttf', 'arial.ttf']
         }
-        candidates = font_map.get(name, ['arial.ttf'])
+        
+        # Standard Linux Font Dir
+        linux_font_dir = "/usr/share/fonts/truetype/liberation/"
+        
+        candidates = font_map.get(name, ['LiberationSans-Regular.ttf', 'arial.ttf'])
         for f in candidates:
+            # Check absolute Linux path first
+            linux_path = os.path.join(linux_font_dir, f)
+            if os.path.exists(linux_path):
+                return ImageFont.truetype(linux_path, size)
+            
+            # Check local directory/Windows system
             try: return ImageFont.truetype(f, size)
             except: continue
+            
         return ImageFont.load_default()
     except: return ImageFont.load_default()
 
@@ -21,19 +35,45 @@ def draw_fit_text(draw, width, text, font_name, max_size, y_pos, color, margin_x
     max_w = width - (2 * margin_x)
     size = max_size
     
+    # Font Mapping for Linux Fallback
+    font_map = {
+        'timesbd.ttf': 'LiberationSerif-Bold.ttf',
+        'times.ttf': 'LiberationSerif-Regular.ttf',
+        'arialbd.ttf': 'LiberationSans-Bold.ttf',
+        'arial.ttf': 'LiberationSans-Regular.ttf'
+    }
+    
+    linux_font_dir = "/usr/share/fonts/truetype/liberation/"
+    
+    def load_dynamic_font(fname, fsize):
+        # Try 1: Direct load (Windows/Local)
+        try: return ImageFont.truetype(fname, fsize)
+        except: pass
+        
+        # Try 2: Linux Path
+        linux_path = os.path.join(linux_font_dir, font_map.get(fname, fname))
+        if os.path.exists(linux_path):
+             return ImageFont.truetype(linux_path, fsize)
+             
+        # Try 3: Linux Mapped Name (if in path)
+        try: return ImageFont.truetype(font_map.get(fname, fname), fsize)
+        except: pass
+        
+        return ImageFont.load_default()
+
     font = ImageFont.load_default()
     while size > 15:
+        font = load_dynamic_font(font_name, size)
+        
         try:
-            font = ImageFont.truetype(font_name, size)
-        except:
-            font = ImageFont.load_default()
-            break
-            
-        if draw.textlength(text, font=font) <= max_w:
-            break
+            if draw.textlength(text, font=font) <= max_w:
+                break
+        except: break # Handle default font which might fail textlength in older PILLOW
         size -= 2
         
-    w = draw.textlength(text, font=font)
+    try: w = draw.textlength(text, font=font)
+    except: w = draw.textsize(text, font=font)[0] # Fallback for older Pillow
+    
     draw.text(((width - w)/2, y_pos), text, fill=color, font=font)
 
 def make_white_transparent(img):
